@@ -18,3 +18,5 @@ python -m alembic revision --autogenerate -m "Criar tabela usuario"
 ```bash
 python -m alembic upgrade head
 ```
+
+

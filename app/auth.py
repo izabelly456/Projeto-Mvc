@@ -1,6 +1,6 @@
-#1. Hash  verificação de senhas com bcrypt
-#2. geração de tokens JWT 
-# 3. leitura e vaçlidação de token vindo do cookie
+# 1. Hash e verificação de senha com bcrypt
+# 2. Geração de token JWT
+# 3. Leitura e validação do token vindo do cokie
 
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
@@ -9,33 +9,32 @@ from fastapi import Request, HTTPException, status
 from dotenv import load_dotenv
 import os
 
+# Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-
 ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
-
-# cryptcontext - configura o bcrypt como o algoritmo de hash
+# CryptContext - configura o bcrypt como algoritmo de hash
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# funcoes de senha
-def hash_password(senha: str):
-    return pwd_context.hash(senha)
+# Função de senha
+def hash_password(password: str):
+    return pwd_context.hash(password)
 
 def verificar_senha(senha: str, senha_hash: str):
     return pwd_context.verify(senha, senha_hash)
 
-# funcoes de token - JWT
+# Função do token - JWT
 def criar_token(data: dict):
     payload = data.copy()
 
-    #define quando o token expira
-    espira = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload.update({"exp": espira})
+    # Define o tempo de expiração do token
+    expira = datetime.now(timezone.utc) + timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
+    payload
 
-    #criar o token JWT
+    # Criar o token JWT
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
 
@@ -43,19 +42,20 @@ def decodificar_token(token: str):
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     return payload
 
-# dependencias do fastapi
+# Dependências do FastAPI
 def get_usuario_logado(request: Request):
-    token = request.cookies.get("token")
+    token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Não autenticado"
+            detail="Token não fornecido"
         )
-    
+
     try:
         payload = decodificar_token(token)
         email = payload.get("sub")
-        if not email:
+
+        if email is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token inválido"
@@ -66,3 +66,9 @@ def get_usuario_logado(request: Request):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido"
         )
+    
+def get_usuario_opcional(request: Request):
+    try:
+        return get_usuario_logado(request)
+    except HTTPException:
+        return None
